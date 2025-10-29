@@ -9,6 +9,8 @@ import com.backend.helmaaibackend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.backend.helmaaibackend.exception.BadRequestException;
+
 
 import java.time.Instant;
 import java.util.*;
@@ -23,12 +25,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthResponse register(RegisterRequest req) {
-        // email benzersiz mi?
         if (userRepo.existsByEmail(req.getEmail())) {
             throw new IllegalArgumentException("Email already registered");
         }
 
-        // default roller
         List<Role> roles = Optional.ofNullable(req.getRoles())
                 .filter(list -> !list.isEmpty())
                 .orElse(List.of(Role.ELDER));
@@ -47,7 +47,6 @@ public class UserServiceImpl implements UserService {
                 .timeZone(defaultIfBlank(req.getTimeZone(), "Europe/Istanbul"))
                 .sttLang(defaultIfBlank(req.getSttLang(), "tr-TR"))
                 .ttsVoice(defaultIfBlank(req.getTtsVoice(), "tr-TR-Standard-A"))
-                // notificationPrefs artık yok
                 .emergencyContacts(req.getEmergencyContacts())
                 .build();
 
@@ -109,6 +108,67 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         return toView(user);
     }
+
+    /* === YENİ: Profil bilgilerini güncelleme === */
+    @Override
+    public UserView updateProfile(String userId, UpdateProfileRequest request) {
+        UserAccount user = userRepo.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if (request.getFullName() != null && !request.getFullName().isBlank()) {
+            user.setFullName(request.getFullName());
+        }
+        if (request.getLocale() != null && !request.getLocale().isBlank()) {
+            user.setLocale(request.getLocale());
+        }
+        if (request.getTimeZone() != null && !request.getTimeZone().isBlank()) {
+            user.setTimeZone(request.getTimeZone());
+        }
+        if (request.getSttLang() != null && !request.getSttLang().isBlank()) {
+            user.setSttLang(request.getSttLang());
+        }
+        if (request.getTtsVoice() != null && !request.getTtsVoice().isBlank()) {
+            user.setTtsVoice(request.getTtsVoice());
+        }
+
+        user.setUpdatedAt(Instant.now());
+        userRepo.save(user);
+
+        return toView(user);
+    }
+
+    /* === YENİ: Şifre güncelleme === */
+    @Override
+    public void updatePassword(String userId, UpdatePasswordRequest request) {
+        UserAccount user = userRepo.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        // eski şifre doğru mu?
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new BadRequestException("Old password is not correct");
+        }
+
+        // yeni şifreyi kaydet
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        user.setUpdatedAt(Instant.now());
+        userRepo.save(user);
+    }
+
+
+    /* === YENİ: Emergency contacts güncelleme === */
+    @Override
+    public UserView updateEmergencyContacts(String userId, UpdateEmergencyContactsRequest request) {
+        UserAccount user = userRepo.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        user.setEmergencyContacts(request.getEmergencyContacts());
+        user.setUpdatedAt(Instant.now());
+        userRepo.save(user);
+
+        return toView(user);
+    }
+
+    /* === yardımcılar === */
 
     private UserView toView(UserAccount u) {
         return UserView.builder()

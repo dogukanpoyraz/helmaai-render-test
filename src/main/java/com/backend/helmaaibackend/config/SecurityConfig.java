@@ -29,7 +29,7 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable());
         http.cors(Customizer.withDefaults());
 
-        // JWT filterimizi Security chain'e ekliyoruz
+        // JWT filterimizi Security zincirine ekliyoruz
         http.addFilterBefore(
                 new JwtAuthFilter(jwtService, userAccountRepository),
                 BasicAuthenticationFilter.class
@@ -49,8 +49,8 @@ public class SecurityConfig {
                 // Auth uçları (register/login herkese açık)
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // /api/me => sadece giriş yapmış kullanıcılar
-                .requestMatchers("/api/me").authenticated()
+                // /api/me ve alt path'leri => sadece giriş yapmış kullanıcılar
+                .requestMatchers("/api/me", "/api/me/**").authenticated()
 
                 // CORS preflight
                 .requestMatchers("/options/**").permitAll()
@@ -60,12 +60,12 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
         );
 
-        // Stateless session (JWT ile kimlik doğrulama yapıyoruz)
+        // Stateless session (JWT kullanıyoruz)
         http.sessionManagement(sm ->
                 sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         );
 
-        // form login, basic auth vs istemiyoruz
+        // form login / basic auth yok
         http.httpBasic(hb -> hb.disable());
         http.formLogin(form -> form.disable());
         http.logout(logout -> logout.disable());
