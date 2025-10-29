@@ -3,14 +3,13 @@ package com.backend.helmaaibackend.service.impl;
 import com.backend.helmaaibackend.domain.Role;
 import com.backend.helmaaibackend.domain.UserAccount;
 import com.backend.helmaaibackend.dto.*;
+import com.backend.helmaaibackend.exception.BadRequestException;
 import com.backend.helmaaibackend.repository.UserAccountRepository;
 import com.backend.helmaaibackend.security.JwtService;
 import com.backend.helmaaibackend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.backend.helmaaibackend.exception.BadRequestException;
-
 
 import java.time.Instant;
 import java.util.*;
@@ -41,8 +40,7 @@ public class UserServiceImpl implements UserService {
                 .active(active)
                 .fullName(req.getFullName())
                 .email(req.getEmail())
-                .createdAt(Instant.now())
-                .updatedAt(Instant.now())
+                // createdAt / updatedAt => will be filled by auditing
                 .locale(defaultIfBlank(req.getLocale(), "tr-TR"))
                 .timeZone(defaultIfBlank(req.getTimeZone(), "Europe/Istanbul"))
                 .sttLang(defaultIfBlank(req.getSttLang(), "tr-TR"))
@@ -83,7 +81,7 @@ public class UserServiceImpl implements UserService {
         }
 
         user.setLastLoginAt(Instant.now());
-        userRepo.save(user);
+        userRepo.save(user); // updatedAt will be set automatically
 
         UserView view = toView(user);
 
@@ -109,7 +107,6 @@ public class UserServiceImpl implements UserService {
         return toView(user);
     }
 
-    /* === YENİ: Profil bilgilerini güncelleme === */
     @Override
     public UserView updateProfile(String userId, UpdateProfileRequest request) {
         UserAccount user = userRepo.findById(userId)
@@ -131,44 +128,44 @@ public class UserServiceImpl implements UserService {
             user.setTtsVoice(request.getTtsVoice());
         }
 
-        user.setUpdatedAt(Instant.now());
-        userRepo.save(user);
+        userRepo.save(user); // updatedAt will be updated by auditing
 
         return toView(user);
     }
 
-    /* === YENİ: Şifre güncelleme === */
     @Override
     public void updatePassword(String userId, UpdatePasswordRequest request) {
         UserAccount user = userRepo.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-        // eski şifre doğru mu?
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
             throw new BadRequestException("Old password is not correct");
         }
 
-        // yeni şifreyi kaydet
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        user.setUpdatedAt(Instant.now());
-        userRepo.save(user);
+        userRepo.save(user); // updatedAt will be updated by auditing
     }
 
-
-    /* === YENİ: Emergency contacts güncelleme === */
     @Override
     public UserView updateEmergencyContacts(String userId, UpdateEmergencyContactsRequest request) {
         UserAccount user = userRepo.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
         user.setEmergencyContacts(request.getEmergencyContacts());
-        user.setUpdatedAt(Instant.now());
-        userRepo.save(user);
+        userRepo.save(user); // updatedAt will be updated by auditing
 
         return toView(user);
     }
 
-    /* === yardımcılar === */
+    /* === NEW: deactivate === */
+    @Override
+    public void deactivateAccount(String userId) {
+        UserAccount user = userRepo.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        user.setActive(false);
+        userRepo.save(user); // updatedAt will be updated by auditing
+    }
 
     private UserView toView(UserAccount u) {
         return UserView.builder()

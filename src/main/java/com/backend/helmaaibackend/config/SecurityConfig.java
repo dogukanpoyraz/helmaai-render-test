@@ -29,43 +29,40 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable());
         http.cors(Customizer.withDefaults());
 
-        // JWT filterimizi Security zincirine ekliyoruz
         http.addFilterBefore(
                 new JwtAuthFilter(jwtService, userAccountRepository),
                 BasicAuthenticationFilter.class
         );
 
         http.authorizeHttpRequests(auth -> auth
-                // Swagger & OpenAPI (herkese açık)
+                // Swagger & OpenAPI
                 .requestMatchers(
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
                         "/swagger-ui.html"
                 ).permitAll()
 
-                // Health check (opsiyonel açık)
+                // Health
                 .requestMatchers("/actuator/health").permitAll()
 
-                // Auth uçları (register/login herkese açık)
+                // Public auth endpoints
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // /api/me ve alt path'leri => sadece giriş yapmış kullanıcılar
+                // Protected profile endpoints
                 .requestMatchers("/api/me", "/api/me/**").authenticated()
 
-                // CORS preflight
+                // Preflight
                 .requestMatchers("/options/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // geri kalan her şey default olarak korumalı
+                // Everything else
                 .anyRequest().authenticated()
         );
 
-        // Stateless session (JWT kullanıyoruz)
         http.sessionManagement(sm ->
                 sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         );
 
-        // form login / basic auth yok
         http.httpBasic(hb -> hb.disable());
         http.formLogin(form -> form.disable());
         http.logout(logout -> logout.disable());

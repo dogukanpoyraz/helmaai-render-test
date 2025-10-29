@@ -21,7 +21,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Helma AI Backend API")
-                        .description("Yaşlı birey destek uygulaması için REST API (Auth, kullanıcı vb.)")
+                        .description("REST API for elderly support application (Auth, user, etc.)")
                         .version("v1")
                         .contact(new Contact().name("Helma Team").email("team@helma.ai"))
                         .license(new License().name("Apache-2.0")))
@@ -32,7 +32,7 @@ public class OpenApiConfig {
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")))
-                // Güvenli endpoint’ler için global security (auth dışındakilerde işe yarar)
+                // Global security for secure endpoints (applies to non-auth endpoints)
                 .addSecurityItem(new SecurityRequirement().addList(JWT_BEARER_SCHEME));
     }
 

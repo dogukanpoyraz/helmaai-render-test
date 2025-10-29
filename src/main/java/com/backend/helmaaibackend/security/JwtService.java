@@ -32,7 +32,7 @@ public class JwtService {
         this.expMinutes = expMinutes;
     }
 
-    // Token oluşturma
+    // Token generation
     public String generate(String subject, Map<String, Object> claims) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(expMinutes * 60);
@@ -47,7 +47,7 @@ public class JwtService {
                 .compact();
     }
 
-    // Token parse & doğrula
+    // Token parse & validate
     public Jws<Claims> parseAndValidate(String token) {
         return Jwts.parserBuilder()
                 .requireIssuer(issuer)
@@ -56,7 +56,7 @@ public class JwtService {
                 .parseClaimsJws(token);
     }
 
-    // Token içinden userId (subject) çek
+    // Extract userId (subject) from token
     public String extractUserId(String token) {
         return parseAndValidate(token).getBody().getSubject();
     }

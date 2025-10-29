@@ -15,7 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Authentication", description = "Kayıt ve giriş işlemleri")
+@Tag(name = "Authentication", description = "Registration and login operations")
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -24,14 +24,14 @@ public class AuthController {
     private final UserService userService;
 
     @Operation(
-            summary = "Kullanıcı kaydı",
-            description = "Yeni kullanıcı oluşturur. Başarılı olduğunda JWT ve kullanıcı profilini döner.",
+            summary = "User registration",
+            description = "Creates a new user. Returns JWT and user profile on success.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Kayıt başarılı",
+                    @ApiResponse(responseCode = "200", description = "Registration successful",
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = AuthResponse.class))),
-                    @ApiResponse(responseCode = "400", description = "Geçersiz istek gövdesi", content = @Content),
-                    @ApiResponse(responseCode = "409", description = "Kullanıcı adı/e-posta zaten kayıtlı", content = @Content)
+                    @ApiResponse(responseCode = "400", description = "Invalid request body", content = @Content),
+                    @ApiResponse(responseCode = "409", description = "Username/email already registered", content = @Content)
             }
     )
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -40,14 +40,14 @@ public class AuthController {
     }
 
     @Operation(
-            summary = "Giriş yap",
-            description = "Kullanıcı adı/e-posta ve parola ile giriş yapar. Başarılı olduğunda JWT ve kullanıcı profilini döner.",
+            summary = "Login",
+            description = "Logs in with username/email and password. Returns JWT and user profile on success.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Giriş başarılı",
+                    @ApiResponse(responseCode = "200", description = "Login successful",
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = AuthResponse.class))),
-                    @ApiResponse(responseCode = "400", description = "Geçersiz kimlik bilgileri veya istek gövdesi", content = @Content),
-                    @ApiResponse(responseCode = "423", description = "Kullanıcı aktif değil", content = @Content)
+                    @ApiResponse(responseCode = "400", description = "Invalid credentials or request body", content = @Content),
+                    @ApiResponse(responseCode = "423", description = "User is not active", content = @Content)
             }
     )
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)

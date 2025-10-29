@@ -10,7 +10,7 @@ import java.util.List;
 @Data
 public class RegisterRequest {
 
-    // username GİTTİ
+    // username REMOVED
 
     @NotBlank
     @Size(min=8, max=128)
@@ -24,15 +24,15 @@ public class RegisterRequest {
     @NotBlank
     private String email;
 
-    private List<Role> roles; // null ise ELDER atayacağız
-    private Boolean active;   // null ise true
+    private List<Role> roles; // null will assign ELDER
+    private Boolean active;   // null will assign true
 
     private String locale;
     private String timeZone;
     private String sttLang;
     private String ttsVoice;
 
-    // notificationPrefs GİTTİ
+    // notificationPrefs REMOVED
 
     private List<EmergencyContact> emergencyContacts;
 }

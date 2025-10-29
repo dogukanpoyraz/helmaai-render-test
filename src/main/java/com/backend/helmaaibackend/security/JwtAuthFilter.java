@@ -19,12 +19,12 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Bu filter şunu yapar:
- * - Authorization: Bearer <jwt> header'ını alır
- * - JWT'yi doğrular
- * - subject içinden userId çıkarır
- * - DB'den user'ı bulur
- * - SecurityContext'e kimlik bilgisini koyar
+ * This filter does the following:
+ * - Gets Authorization: Bearer <jwt> header
+ * - Validates JWT
+ * - Extracts userId from subject
+ * - Finds user from DB
+ * - Sets authentication info in SecurityContext
  */
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -38,10 +38,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // 1. Header'dan token çek
+        // 1. Extract token from header
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
-            // Token yoksa zorlamıyoruz; public endpoint olabilir.
+            // No token doesn't force error; might be a public endpoint.
             filterChain.doFilter(request, response);
             return;
         }
@@ -53,22 +53,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         try {
-            // 2. Token doğrula / içinden userId çek
+            // 2. Validate token / extract userId
             String userId = jwtService.extractUserId(token);
 
-            // 3. DB'den kullanıcıyı bul
+            // 3. Find user from DB
             UserAccount user = userRepo.findById(userId).orElse(null);
             if (user == null || !user.isActive()) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            // 4. Kullanıcının rolleri -> Spring Authority listesine çevir
+            // 4. Convert user roles -> Spring Authority list
             List<SimpleGrantedAuthority> authorities = user.getRoles().stream()
                     .map(roleEnum -> new SimpleGrantedAuthority("ROLE_" + roleEnum.name()))
                     .collect(Collectors.toList());
 
-            // 5. Authentication objesi hazırla
+            // 5. Prepare Authentication object
             AbstractAuthenticationToken authentication =
                     new AbstractAuthenticationToken(authorities) {
                         @Override
@@ -84,15 +84,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             authentication.setAuthenticated(true);
 
-            // 6. SecurityContext'e koy
+            // 6. Set in SecurityContext
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
         } catch (Exception e) {
-            // Token patlarsa: context set etmiyoruz. Request public gibi davranır.
+            // If token fails: don't set context. Request behaves as public.
             SecurityContextHolder.clearContext();
         }
 
-        // 7. zincir devam
+        // 7. Continue chain
         filterChain.doFilter(request, response);
     }
 }

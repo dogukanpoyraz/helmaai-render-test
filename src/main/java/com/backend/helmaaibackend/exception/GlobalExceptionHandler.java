@@ -10,15 +10,15 @@ import java.util.Map;
 
 /**
  * Global exception handler.
- * Swagger dokümantasyonuna karışmaması için @Hidden.
- * @ControllerAdvice + @ResponseBody -> JSON error response döner.
+ * @Hidden to avoid cluttering Swagger documentation.
+ * @ControllerAdvice + @ResponseBody -> returns JSON error response.
  */
 @Hidden
 @ControllerAdvice
 @ResponseBody
 public class GlobalExceptionHandler {
 
-    // 400 - bad input (ör: eski şifre yanlış)
+    // 400 - bad input (e.g.: old password incorrect)
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<Map<String, Object>> handleBadRequest(BadRequestException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST) // 400
@@ -29,7 +29,7 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    // 409 - business conflict (örn email zaten kayıtlı)
+    // 409 - business conflict (e.g.: email already registered)
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT) // 409
@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    // 423 - kullanıcı aktif değil vs
+    // 423 - user not active etc
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
         return ResponseEntity.status(HttpStatus.LOCKED) // 423
@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    // 404 - bulunamadı
+    // 404 - not found
     @ExceptionHandler(java.util.NoSuchElementException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(java.util.NoSuchElementException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND) // 404

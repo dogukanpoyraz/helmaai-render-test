@@ -1,10 +1,7 @@
 package com.backend.helmaaibackend.controller;
 
 import com.backend.helmaaibackend.domain.UserAccount;
-import com.backend.helmaaibackend.dto.UpdateEmergencyContactsRequest;
-import com.backend.helmaaibackend.dto.UpdatePasswordRequest;
-import com.backend.helmaaibackend.dto.UpdateProfileRequest;
-import com.backend.helmaaibackend.dto.UserView;
+import com.backend.helmaaibackend.dto.*;
 import com.backend.helmaaibackend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(name = "Profile", description = "Aktif kullanıcının hesap yönetimi")
+@Tag(name = "Profile", description = "Active user's own account")
 @RestController
 @RequestMapping("/api/me")
 public class MeController {
@@ -24,10 +21,6 @@ public class MeController {
         this.userService = userService;
     }
 
-    /**
-     * SecurityContext'ten giriş yapan kullanıcının ID'sini alır.
-     * JwtAuthFilter zaten SecurityContext'e UserAccount koyuyor.
-     */
     private String currentUserIdOrThrow() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof UserAccount user)) {
@@ -37,45 +30,40 @@ public class MeController {
     }
 
     @Operation(
-            summary = "Aktif kullanıcının profilini getir",
-            description = "Header'daki Bearer JWT token'dan kullanıcıyı çözer ve UserView döner."
+            summary = "Get active user's profile",
+            description = "Resolves user from Bearer JWT token in header and returns UserView."
     )
     @GetMapping
     public ResponseEntity<UserView> me() {
         String userId = currentUserIdOrThrow();
-        UserView view = userService.toView(userId);
-        return ResponseEntity.ok(view);
+        return ResponseEntity.ok(userService.toView(userId));
     }
 
     @Operation(
-            summary = "Profil bilgilerini güncelle",
-            description = "fullName, locale, timeZone, sttLang, ttsVoice alanlarını günceller. Null olan alanlar değişmez."
+            summary = "Update profile information",
+            description = "Updates fullName, locale, timeZone, sttLang, ttsVoice fields."
     )
     @PutMapping
-    public ResponseEntity<UserView> updateProfile(
-            @Valid @RequestBody UpdateProfileRequest request
-    ) {
+    public ResponseEntity<UserView> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         String userId = currentUserIdOrThrow();
         UserView updated = userService.updateProfile(userId, request);
         return ResponseEntity.ok(updated);
     }
 
     @Operation(
-            summary = "Şifre değiştir",
-            description = "Doğru eski şifre verildiğinde yeni şifre ile günceller. Başarılıysa 204 döner."
+            summary = "Change password",
+            description = "Updates with new password when correct old password is provided."
     )
     @PutMapping("/password")
-    public ResponseEntity<Void> updatePassword(
-            @Valid @RequestBody UpdatePasswordRequest request
-    ) {
+    public ResponseEntity<Void> updatePassword(@Valid @RequestBody UpdatePasswordRequest request) {
         String userId = currentUserIdOrThrow();
         userService.updatePassword(userId, request);
-        return ResponseEntity.noContent().build(); // 204
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(
-            summary = "Acil durum kişilerini güncelle",
-            description = "emergencyContacts listesini tamamen değiştirir ve güncel profili döner."
+            summary = "Update emergency contacts",
+            description = "Completely replaces the emergencyContacts list."
     )
     @PutMapping("/emergency-contacts")
     public ResponseEntity<UserView> updateEmergencyContacts(
@@ -84,5 +72,16 @@ public class MeController {
         String userId = currentUserIdOrThrow();
         UserView updated = userService.updateEmergencyContacts(userId, request);
         return ResponseEntity.ok(updated);
+    }
+
+    @Operation(
+            summary = "Deactivate account (self-deactivate)",
+            description = "Sets active=false. User cannot login again after this operation."
+    )
+    @PutMapping("/deactivate")
+    public ResponseEntity<Void> deactivate() {
+        String userId = currentUserIdOrThrow();
+        userService.deactivateAccount(userId);
+        return ResponseEntity.noContent().build();
     }
 }

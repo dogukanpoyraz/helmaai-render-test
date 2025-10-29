@@ -6,7 +6,7 @@ import org.springframework.data.mongodb.config.EnableMongoAuditing;
 
 @SpringBootApplication
 @EnableMongoAuditing
-public class HelmaaibackendApplication { // ← isim run config ile aynı
+public class HelmaaibackendApplication { // ← name matches run config
     public static void main(String[] args) {
         SpringApplication.run(HelmaaibackendApplication.class, args);
     }
