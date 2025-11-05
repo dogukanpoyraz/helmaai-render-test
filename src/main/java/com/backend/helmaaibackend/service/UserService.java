@@ -11,5 +11,5 @@ public interface UserService {
     void updatePassword(String userId, UpdatePasswordRequest request);
     UserView updateEmergencyContacts(String userId, UpdateEmergencyContactsRequest request);
 
-    void deactivateAccount(String userId); // new
+    void deactivateAccount(String userId);
 }

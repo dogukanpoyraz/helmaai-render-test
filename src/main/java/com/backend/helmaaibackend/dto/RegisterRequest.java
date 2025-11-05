@@ -10,8 +10,6 @@ import java.util.List;
 @Data
 public class RegisterRequest {
 
-    // username REMOVED
-
     @NotBlank
     @Size(min=8, max=128)
     private String password; // plain text at register time only
@@ -31,8 +29,6 @@ public class RegisterRequest {
     private String timeZone;
     private String sttLang;
     private String ttsVoice;
-
-    // notificationPrefs REMOVED
 
     private List<EmergencyContact> emergencyContacts;
 }

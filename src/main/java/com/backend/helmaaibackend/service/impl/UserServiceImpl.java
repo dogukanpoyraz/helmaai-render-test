@@ -157,7 +157,7 @@ public class UserServiceImpl implements UserService {
         return toView(user);
     }
 
-    /* === NEW: deactivate === */
+    // deactivate
     @Override
     public void deactivateAccount(String userId) {
         UserAccount user = userRepo.findById(userId)

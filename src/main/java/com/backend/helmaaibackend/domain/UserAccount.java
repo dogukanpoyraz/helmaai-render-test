@@ -16,7 +16,6 @@ import java.util.List;
 @Builder
 @Document(collection = "users")
 @CompoundIndexes({
-        // username removed, so we're removing this
         @CompoundIndex(name = "u_unique_email", def = "{'email': 1}", unique = true, sparse = true)
 })
 public class UserAccount {

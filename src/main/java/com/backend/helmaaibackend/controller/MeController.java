@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "Profile", description = "Active user's own account")
 @RestController
-@RequestMapping("/api/me")
+@RequestMapping("/api/profile")
 public class MeController {
 
     private final UserService userService;
