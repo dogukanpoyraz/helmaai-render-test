@@ -49,11 +49,14 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
 
                 // Protected profile endpoints
-                .requestMatchers("/api/me", "/api/me/**").authenticated()
+                .requestMatchers("/api/profile", "/api/profile/**").authenticated()
 
                 // Preflight
                 .requestMatchers("/options/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                // Admin endpoints
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                 // Everything else
                 .anyRequest().authenticated()

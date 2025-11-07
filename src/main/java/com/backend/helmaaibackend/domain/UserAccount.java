@@ -47,4 +47,7 @@ public class UserAccount {
     private String ttsVoice;
 
     private List<EmergencyContact> emergencyContacts;
+
+    @JsonIgnore
+    private Instant deletedAt;
 }

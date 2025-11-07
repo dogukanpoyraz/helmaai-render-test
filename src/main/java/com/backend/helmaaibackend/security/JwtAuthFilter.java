@@ -58,7 +58,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             // 3. Find user from DB
             UserAccount user = userRepo.findById(userId).orElse(null);
-            if (user == null || !user.isActive()) {
+            if (user == null || !user.isActive() || user.getDeletedAt() != null) {
                 filterChain.doFilter(request, response);
                 return;
             }

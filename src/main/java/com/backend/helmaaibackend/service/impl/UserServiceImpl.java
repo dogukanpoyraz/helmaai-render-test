@@ -28,19 +28,23 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Email already registered");
         }
 
-        List<Role> roles = Optional.ofNullable(req.getRoles())
-                .filter(list -> !list.isEmpty())
-                .orElse(List.of(Role.ELDER));
+        // Whitelist: sadece bu roller allowed
+        var allowed = Set.of(Role.ELDER, Role.FAMILY, Role.CAREGIVER);
+
+        List<Role> requested = req.getRoles();
+        boolean hasDisallowedRole = requested.stream().anyMatch(r -> !allowed.contains(r));
+        if (hasDisallowedRole) {
+            throw new BadRequestException("Only ELDER, FAMILY, CAREGIVER roles are allowed on public registration");
+        }
 
         boolean active = req.getActive() == null ? true : req.getActive();
 
         UserAccount entity = UserAccount.builder()
                 .passwordHash(passwordEncoder.encode(req.getPassword()))
-                .roles(roles)
+                .roles(requested)
                 .active(active)
                 .fullName(req.getFullName())
                 .email(req.getEmail())
-                // createdAt / updatedAt => will be filled by auditing
                 .locale(defaultIfBlank(req.getLocale(), "tr-TR"))
                 .timeZone(defaultIfBlank(req.getTimeZone(), "Europe/Istanbul"))
                 .sttLang(defaultIfBlank(req.getSttLang(), "tr-TR"))
@@ -72,10 +76,12 @@ public class UserServiceImpl implements UserService {
         UserAccount user = userRepo.findByEmail(req.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
+        if (user.getDeletedAt() != null) {
+            throw new IllegalStateException("User is deleted");
+        }
         if (!user.isActive()) {
             throw new IllegalStateException("User is not active");
         }
-
         if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
             throw new IllegalArgumentException("Invalid credentials");
         }
@@ -164,8 +170,10 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
         user.setActive(false);
-        userRepo.save(user); // updatedAt will be updated by auditing
+        user.setDeletedAt(Instant.now());
+        userRepo.save(user);
     }
+
 
     private UserView toView(UserAccount u) {
         return UserView.builder()

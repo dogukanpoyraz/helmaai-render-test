@@ -76,7 +76,7 @@ public class MeController {
 
     @Operation(
             summary = "Deactivate account (self-deactivate)",
-            description = "Sets active=false. User cannot login again after this operation."
+            description = "Set active=false and deletedAt. After this process, the user cannot log in and will not appear in the admin lists."
     )
     @PutMapping("/deactivate")
     public ResponseEntity<Void> deactivate() {
