@@ -55,6 +55,12 @@ public class SecurityConfig {
                 .requestMatchers("/options/**").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+
+
+                // Emergency endpoints
+                .requestMatchers("/api/emergency/**").authenticated()
+
+
                 // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 

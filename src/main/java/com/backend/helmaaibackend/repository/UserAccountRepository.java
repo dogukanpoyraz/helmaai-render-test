@@ -1,5 +1,6 @@
 package com.backend.helmaaibackend.repository;
 
+import com.backend.helmaaibackend.domain.Role;
 import com.backend.helmaaibackend.domain.UserAccount;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,4 +17,10 @@ public interface UserAccountRepository extends MongoRepository<UserAccount, Stri
 
     @Query("{ 'deletedAt': null, $or: [ {'email': { $regex: ?0, $options: 'i' }}, {'fullName': { $regex: ?0, $options: 'i' }} ] }")
     Page<UserAccount> searchActive(String keyword, Pageable pageable);
+
+    long countByDeletedAtIsNull();
+    long countByActiveTrueAndDeletedAtIsNull();
+    long countByDeletedAtIsNotNull();
+
+    long countByRolesContainingAndDeletedAtIsNull(Role role);
 }

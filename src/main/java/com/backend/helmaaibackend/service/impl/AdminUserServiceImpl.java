@@ -3,13 +3,14 @@ package com.backend.helmaaibackend.service.impl;
 import com.backend.helmaaibackend.domain.Role;
 import com.backend.helmaaibackend.domain.UserAccount;
 import com.backend.helmaaibackend.dto.admin.AdminUserView;
+import com.backend.helmaaibackend.dto.admin.StatsResponse;
 import com.backend.helmaaibackend.repository.UserAccountRepository;
 import com.backend.helmaaibackend.service.AdminUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -51,7 +52,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
 
         u.setActive(active);
-        u = userRepo.save(u); // auditing updatedAt sets
+        u = userRepo.save(u);
         return toAdminView(u);
     }
 
@@ -71,8 +72,7 @@ public class AdminUserServiceImpl implements AdminUserService {
         UserAccount u = userRepo.findById(userId)
                 .filter(x -> x.getDeletedAt() == null)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
-
-        u.setDeletedAt(Instant.now());
+        u.setDeletedAt(java.time.Instant.now());
         u.setActive(false);
         userRepo.save(u);
     }
@@ -81,16 +81,55 @@ public class AdminUserServiceImpl implements AdminUserService {
     public AdminUserView restore(String userId) {
         UserAccount u = userRepo.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
-
         if (u.getDeletedAt() == null) {
             throw new IllegalArgumentException("User is not deleted");
         }
-
         u.setDeletedAt(null);
         u.setActive(true);
         u = userRepo.save(u);
-
         return toAdminView(u);
+    }
+
+    @Override
+    public void hardDelete(String userId) {
+        if (!userRepo.existsById(userId)) {
+            throw new NoSuchElementException("User not found");
+        }
+        userRepo.deleteById(userId);
+    }
+
+    @Override
+    public AdminUserView deactivate(String userId) {
+        UserAccount u = userRepo.findById(userId)
+                .filter(x -> x.getDeletedAt() == null)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+        u.setActive(false);
+        u = userRepo.save(u);
+        return toAdminView(u);
+    }
+
+    @Override
+    public StatsResponse stats() {
+        long total = userRepo.count();
+        long active = userRepo.countByActiveTrueAndDeletedAtIsNull();
+        long deleted = userRepo.countByDeletedAtIsNotNull();
+
+        EnumMap<Role, Long> byRole = new EnumMap<>(Role.class);
+        for (Role r : Role.values()) {
+            long c = userRepo.countByRolesContainingAndDeletedAtIsNull(r);
+            byRole.put(r, c);
+        }
+
+        return StatsResponse.builder()
+                .totalUsers(total)
+                .activeUsers(active)
+                .deletedUsers(deleted)
+                .usersByRole(byRole.entrySet().stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                e -> e.getKey().name(),
+                                java.util.Map.Entry::getValue
+                        )))
+                .build();
     }
 
     private AdminUserView toAdminView(UserAccount u) {

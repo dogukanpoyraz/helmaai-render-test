@@ -1,11 +1,13 @@
 package com.backend.helmaaibackend.service.impl;
 
+import com.backend.helmaaibackend.domain.AuditType;
 import com.backend.helmaaibackend.domain.Role;
 import com.backend.helmaaibackend.domain.UserAccount;
 import com.backend.helmaaibackend.dto.*;
 import com.backend.helmaaibackend.exception.BadRequestException;
 import com.backend.helmaaibackend.repository.UserAccountRepository;
 import com.backend.helmaaibackend.security.JwtService;
+import com.backend.helmaaibackend.service.AuditLogService;
 import com.backend.helmaaibackend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +23,7 @@ public class UserServiceImpl implements UserService {
     private final UserAccountRepository userRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final AuditLogService auditLogService;
 
     @Override
     public AuthResponse register(RegisterRequest req) {
@@ -28,7 +31,7 @@ public class UserServiceImpl implements UserService {
             throw new IllegalArgumentException("Email already registered");
         }
 
-        // Whitelist: sadece bu roller allowed
+        // Whitelist: only these roles are allowed
         var allowed = Set.of(Role.ELDER, Role.FAMILY, Role.CAREGIVER);
 
         List<Role> requested = req.getRoles();
@@ -73,21 +76,32 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthResponse login(LoginRequest req) {
-        UserAccount user = userRepo.findByEmail(req.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
+        var userOpt = userRepo.findByEmail(req.getEmail());
+
+        if (userOpt.isEmpty()) {
+            auditLogService.log(AuditType.LOGIN_FAILED, null, req.getEmail(), null, null, "email not found");
+            throw new IllegalArgumentException("Invalid credentials");
+        }
+
+        UserAccount user = userOpt.get();
 
         if (user.getDeletedAt() != null) {
+            auditLogService.log(AuditType.LOGIN_FAILED, user.getId(), user.getEmail(), null, null, "user deleted");
             throw new IllegalStateException("User is deleted");
         }
         if (!user.isActive()) {
+            auditLogService.log(AuditType.LOGIN_FAILED, user.getId(), user.getEmail(), null, null, "user inactive");
             throw new IllegalStateException("User is not active");
         }
         if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
+            auditLogService.log(AuditType.LOGIN_FAILED, user.getId(), user.getEmail(), null, null, "wrong password");
             throw new IllegalArgumentException("Invalid credentials");
         }
 
         user.setLastLoginAt(Instant.now());
         userRepo.save(user); // updatedAt will be set automatically
+
+        auditLogService.log(AuditType.LOGIN_SUCCESS, user.getId(), user.getEmail(), null, null, "login ok");
 
         UserView view = toView(user);
 
@@ -172,6 +186,8 @@ public class UserServiceImpl implements UserService {
         user.setActive(false);
         user.setDeletedAt(Instant.now());
         userRepo.save(user);
+
+        auditLogService.log(AuditType.USER_DEACTIVATE_SELF, user.getId(), user.getEmail(), user.getId(), user.getEmail(), "self-deactivate");
     }
 
 
