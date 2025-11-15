@@ -16,6 +16,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @RequiredArgsConstructor
@@ -27,6 +32,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable());
+
+        // CORS settings will be taken from the bean below
         http.cors(Customizer.withDefaults());
 
         http.addFilterBefore(
@@ -48,21 +55,18 @@ public class SecurityConfig {
                 // Public auth endpoints
                 .requestMatchers("/api/auth/**").permitAll()
 
-                // Protected profile endpoints
+                // Profile endpoints
                 .requestMatchers("/api/profile", "/api/profile/**").authenticated()
-
-                // Preflight
-                .requestMatchers("/options/**").permitAll()
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-
 
                 // Emergency endpoints
                 .requestMatchers("/api/emergency/**").authenticated()
 
-
                 // Admin endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                // Preflight
+                .requestMatchers("/options/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 // Everything else
                 .anyRequest().authenticated()
@@ -77,6 +81,48 @@ public class SecurityConfig {
         http.logout(logout -> logout.disable());
 
         return http.build();
+    }
+
+    /**
+     * CORS configuration:
+     * Only the specified origins, headers and HTTP methods are allowed.
+     */
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+
+        // ALLOWED ORIGINS (protocol + domain + port)
+        config.setAllowedOrigins(List.of(
+                "https://helma-ai-website.web.app",
+                "https://helma-ai-website.firebaseapp.com",
+                "https://helma-ai.com",
+                "http://localhost:3000"
+        ));
+
+        // ALLOWED HTTP METHODS
+        config.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
+        ));
+
+        // ALLOWED HEADERS
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "Accept",
+                "Origin"
+        ));
+
+        // So the frontend can read the Authorization header
+        config.setExposedHeaders(List.of("Authorization"));
+
+        // If you use cookies in the future, setting this to true will help; if using JWT via header, it's fine
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        // Apply to all endpoints
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     @Bean
