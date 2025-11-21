@@ -147,6 +147,7 @@ public class AdminUserServiceImpl implements AdminUserService {
                 .sttLang(u.getSttLang())
                 .ttsVoice(u.getTtsVoice())
                 .emergencyContacts(u.getEmergencyContacts())
+                .profilePhotoUrl(u.getProfilePhotoUrl())
                 .build();
     }
 }

@@ -6,9 +6,11 @@ import com.backend.helmaaibackend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Tag(name = "Profile", description = "Active user's own account")
 @RestController
@@ -83,5 +85,32 @@ public class MeController {
         String userId = currentUserIdOrThrow();
         userService.deactivateAccount(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(
+            summary = "Upload / update profile photo",
+            description = "Uploads a new profile photo image (JPEG/PNG). Replaces any existing one."
+    )
+    @PostMapping(
+            value = "/photo",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<UserView> uploadProfilePhoto(
+            @RequestPart("file") MultipartFile file
+    ) {
+        String userId = currentUserIdOrThrow();
+        UserView updated = userService.updateProfilePhoto(userId, file);
+        return ResponseEntity.ok(updated);
+    }
+
+    @Operation(
+            summary = "Delete profile photo",
+            description = "Deletes the current profile photo from Azure Storage and clears it from the profile."
+    )
+    @DeleteMapping("/photo")
+    public ResponseEntity<UserView> deleteProfilePhoto() {
+        String userId = currentUserIdOrThrow();
+        UserView updated = userService.deleteProfilePhoto(userId);
+        return ResponseEntity.ok(updated);
     }
 }

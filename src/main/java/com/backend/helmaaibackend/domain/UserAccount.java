@@ -50,4 +50,8 @@ public class UserAccount {
 
     @JsonIgnore
     private Instant deletedAt;
+
+    private String profilePhotoUrl;
+    private String profilePhotoBlobName;
+
 }

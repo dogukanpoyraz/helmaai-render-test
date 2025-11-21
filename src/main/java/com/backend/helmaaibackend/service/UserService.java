@@ -1,6 +1,7 @@
 package com.backend.helmaaibackend.service;
 
 import com.backend.helmaaibackend.dto.*;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
     AuthResponse register(RegisterRequest request);
@@ -12,4 +13,8 @@ public interface UserService {
     UserView updateEmergencyContacts(String userId, UpdateEmergencyContactsRequest request);
 
     void deactivateAccount(String userId);
+
+    UserView updateProfilePhoto(String userId, MultipartFile file);
+
+    UserView deleteProfilePhoto(String userId);
 }

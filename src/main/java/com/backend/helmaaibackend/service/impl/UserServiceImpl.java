@@ -8,10 +8,12 @@ import com.backend.helmaaibackend.exception.BadRequestException;
 import com.backend.helmaaibackend.repository.UserAccountRepository;
 import com.backend.helmaaibackend.security.JwtService;
 import com.backend.helmaaibackend.service.AuditLogService;
+import com.backend.helmaaibackend.service.StorageService;
 import com.backend.helmaaibackend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.*;
@@ -24,6 +26,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuditLogService auditLogService;
+    private final StorageService storageService; // <--- yeni
 
     @Override
     public AuthResponse register(RegisterRequest req) {
@@ -190,6 +193,83 @@ public class UserServiceImpl implements UserService {
         auditLogService.log(AuditType.USER_DEACTIVATE_SELF, user.getId(), user.getEmail(), user.getId(), user.getEmail(), "self-deactivate");
     }
 
+    /**
+     * Profil fotoğrafını güncelle (Azure Storage upload + eski foto silme).
+     */
+    @Override
+    public UserView updateProfilePhoto(String userId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("Profile photo file is empty");
+        }
+
+        // Basit mime-type kontrolü
+        String contentType = file.getContentType();
+        if (contentType == null ||
+                !(contentType.equalsIgnoreCase("image/jpeg")
+                        || contentType.equalsIgnoreCase("image/png"))) {
+            throw new BadRequestException("Only JPEG and PNG images are allowed");
+        }
+
+        // Boyut sınırı (örnek: 5 MB)
+        if (file.getSize() > 5 * 1024 * 1024) {
+            throw new BadRequestException("File size must be <= 5MB");
+        }
+
+        UserAccount user = userRepo.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if (user.getDeletedAt() != null) {
+            throw new IllegalStateException("User is deleted");
+        }
+        if (!user.isActive()) {
+            throw new IllegalStateException("User is not active");
+        }
+
+        // Eski profil fotoğrafı varsa Azure'dan sil
+        if (user.getProfilePhotoBlobName() != null) {
+            storageService.deleteProfilePhoto(user.getProfilePhotoBlobName());
+        }
+
+        // Yeni profil fotoğrafını upload et
+        String url = storageService.uploadProfilePhoto(userId, file);
+
+        // URL'den blobName'i çıkar (container içi path)
+        String blobName = extractBlobNameFromUrl(url);
+
+        user.setProfilePhotoUrl(url);
+        user.setProfilePhotoBlobName(blobName);
+
+        userRepo.save(user);
+
+        return toView(user);
+    }
+
+    /**
+     * Profil fotoğrafını kaldır (Azure + DB).
+     */
+    @Override
+    public UserView deleteProfilePhoto(String userId) {
+        UserAccount user = userRepo.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if (user.getDeletedAt() != null) {
+            throw new IllegalStateException("User is deleted");
+        }
+        if (!user.isActive()) {
+            throw new IllegalStateException("User is not active");
+        }
+
+        if (user.getProfilePhotoBlobName() != null) {
+            storageService.deleteProfilePhoto(user.getProfilePhotoBlobName());
+        }
+
+        user.setProfilePhotoUrl(null);
+        user.setProfilePhotoBlobName(null);
+
+        userRepo.save(user);
+
+        return toView(user);
+    }
 
     private UserView toView(UserAccount u) {
         return UserView.builder()
@@ -204,10 +284,32 @@ public class UserServiceImpl implements UserService {
                 .sttLang(u.getSttLang())
                 .ttsVoice(u.getTtsVoice())
                 .emergencyContacts(u.getEmergencyContacts())
+                .profilePhotoUrl(u.getProfilePhotoUrl())
                 .build();
     }
 
     private String defaultIfBlank(String val, String def) {
         return (val == null || val.isBlank()) ? def : val;
+    }
+
+    /**
+     * https://account.blob.core.windows.net/container/profile-photos/userId/uuid.png
+     * -> profile-photos/userId/uuid.png
+     */
+    private String extractBlobNameFromUrl(String url) {
+        if (url == null) {
+            return null;
+        }
+        int idx = url.indexOf(".blob.core.windows.net/");
+        if (idx == -1) {
+            return null;
+        }
+        String afterHost = url.substring(idx + ".blob.core.windows.net/".length());
+        // afterHost = "container/profile-photos/userId/uuid.png"
+        int firstSlash = afterHost.indexOf('/');
+        if (firstSlash == -1) {
+            return null;
+        }
+        return afterHost.substring(firstSlash + 1); // "profile-photos/userId/uuid.png"
     }
 }
